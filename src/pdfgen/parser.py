@@ -476,6 +476,7 @@ class XmlParser(object):
     fonts = {}
     MEDIA_URL = ''
     STATIC_URL = ''
+    MEDIA_ROOT = settings.MEDIA_ROOT
 
     def __init__(self):
         self.styles = getSampleStyleSheet()
