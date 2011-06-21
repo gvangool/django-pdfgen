@@ -473,6 +473,10 @@ def inner_xml(e):
     return etree.tostring(e)[len(e.tag)+2:-len(e.tag)-3]
 
 class XmlParser(object):
+    """
+    Management command to create a pdf
+    """
+
     document = None
     styles = None
     out_buffer = None
