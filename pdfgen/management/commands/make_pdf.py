@@ -5,9 +5,15 @@ from optparse import make_option
 import codecs
 
 class Command(NoArgsCommand):
+    """
+    Management command to create a pdf
+    """
+
     help = u'Generate pdf'
     option_list = NoArgsCommand.option_list + (
-        make_option('--source', dest='source', action='store', default=None, help='The source file in the City Live Template for ReportLab (CLTR) language.'),
+        make_option('--source', dest='source', action='store', default=None,
+                    help='The source file in the City Live Template for '
+                         'ReportLab (CLTR) language.'),
     )
 
     def handle_noargs(self, **options):

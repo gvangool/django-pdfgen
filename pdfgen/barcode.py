@@ -25,7 +25,6 @@ class Barcode(Flowable):
         self.library = library
         self.align = align
 
-
     def draw(self):
         import subprocess
         import tempfile
@@ -43,9 +42,8 @@ class Barcode(Flowable):
 
         # the arguments for ghostscript
         data = self.data
-        res = 72 * self.resolution_factor * self.scale # DPI resolution
+        res = 72 * self.resolution_factor * self.scale  # DPI resolution
         type = self.type
-
 
         bbox_proc = subprocess.Popen(['gs',
                                       '-sDEVICE=bbox',
