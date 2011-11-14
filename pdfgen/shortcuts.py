@@ -1,4 +1,4 @@
-from pdfgen.parser import Parser, XmlParser
+from pdfgen.parser import Parser, XmlParser, find
 from django.template.context import Context
 from django.template.loader import render_to_string
 from django.http import HttpResponse
@@ -11,8 +11,8 @@ def get_parser(template_name):
 
     if template_name[-4:] == '.xml':
         parser = XmlParser()
-        parser.media_root = settings.MEDIA_ROOT
-        parser.barcode_library = os.path.join(settings.MEDIA_ROOT, 'common', 'pdf_img', 'barcode.ps')
+        # set the barcode file
+        parser.barcode_library = find('common/pdf_img/barcode.ps')
         return parser
     else:
         return Parser()
