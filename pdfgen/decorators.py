@@ -12,7 +12,7 @@ from pdfgen.shortcuts import render_to_pdf_download, multiple_templates_to_pdf_d
 def pdf_download(default_template_name, default_file_name=None, default_context=None):
     """
     Based on templatable_view from Jonathan Slenders
-    
+
     Creates a decorator which
     - Extracts the `context` and `template_name` params from the view.
     - Call the view without those parameters
@@ -67,13 +67,13 @@ def pdf_download(default_template_name, default_file_name=None, default_context=
             else:
                 # otherwise, just return the HttpResponseRedirect or whatever the view returned
                 return view_result
-            
+
             if isinstance(template_name, list):
                 response = multiple_templates_to_pdf_download(template_name, context, context_instance=RequestContext(request), filename=file_name)
             else:
                 response = render_to_pdf_download(template_name, context, context_instance=RequestContext(request), filename=file_name)
-            
+
             return response
-            
+
         return decorate
     return decorator

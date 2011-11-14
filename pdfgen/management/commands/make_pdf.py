@@ -18,11 +18,11 @@ class Command(NoArgsCommand):
         fh = codecs.open(source_file, 'rt', 'utf-8')
         buffer = fh.read()
         fh.close()
-        
+
         from pdfgen.parser import Parser
         p = Parser()
         output = p.parse(buffer)
-        
+
         fh = open(source_file + '.pdf', 'wb')
         fh.write(output)
         fh.close()
