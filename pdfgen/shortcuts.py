@@ -1,10 +1,13 @@
-from pdfgen.parser import Parser, XmlParser, find
+from reportlab.platypus.flowables import PageBreak
+
+from django.conf import settings
+from django.http import HttpResponse
 from django.template.context import Context
 from django.template.loader import render_to_string
-from django.http import HttpResponse
-from reportlab.platypus.flowables import PageBreak
 from django.utils import translation
-from django.conf import settings
+
+from pdfgen.parser import Parser, XmlParser, find
+
 
 def get_parser(template_name):
     """

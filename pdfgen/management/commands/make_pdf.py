@@ -1,8 +1,11 @@
+import codecs
+from optparse import make_option
+
 from django.conf import settings
 from django.core.management.base import NoArgsCommand
 
-from optparse import make_option
-import codecs
+from pdfgen.parser import Parser
+
 
 class Command(NoArgsCommand):
     """
@@ -25,7 +28,6 @@ class Command(NoArgsCommand):
         buffer = fh.read()
         fh.close()
 
-        from pdfgen.parser import Parser
         p = Parser()
         output = p.parse(buffer)
 

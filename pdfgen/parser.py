@@ -1,20 +1,24 @@
+import codecs
+import logging
+import os
 from cStringIO import StringIO
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus.doctemplate import SimpleDocTemplate
-from reportlab.platypus import Paragraph, Table, Spacer, Image, PageBreak
+import reportlab
+from reportlab.lib import pagesizes, colors
 from reportlab.lib.units import cm, inch, mm, toLength
 from reportlab.lib.pagesizes import A4
-from reportlab.lib import pagesizes
-from reportlab.lib import colors
 from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
-from reportlab.lib.styles import ParagraphStyle
-from svglib.svglib import svg2rlg
-import codecs
-import os
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.platypus import Paragraph, Table, Spacer, Image, PageBreak
+from reportlab.platypus.doctemplate import SimpleDocTemplate
 from reportlab.platypus.frames import Frame
 from reportlab.platypus.figures import DrawingFigure
 from reportlab.platypus.flowables import Flowable, XBox
+from svglib.svglib import svg2rlg
+from svglib.svglib import SvgRenderer
+
+import xml.dom.minidom
 
 from django.conf import settings
 try:
@@ -22,6 +26,28 @@ try:
 except ImportError:
     def find(path):
         return os.path.join(settings.MEDIA_ROOT, path)
+
+# find an etree implementation
+try:
+    from lxml import etree
+except ImportError:
+    try:
+        # Python 2.5
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        try:
+            # Python 2.5
+            import xml.etree.ElementTree as etree
+        except ImportError:
+            try:
+                # normal cElementTree install
+                import cElementTree as etree
+            except ImportError:
+                try:
+                    # normal ElementTree install
+                    import elementtree.ElementTree as etree
+                except ImportError:
+                    print("Failed to import ElementTree from any known place")
 
 from pdfgen.barcode import Barcode
 
@@ -105,10 +131,6 @@ class Parser(object):
     img_dict = {}
 
     def import_pdf_font(self, base_name, face_name):
-        import os
-        import reportlab
-        from reportlab.pdfbase import pdfmetrics
-
         if self.fonts.get(face_name, None) is None:
             afm = find(base_name + '.afm')
             pfb = find(base_name + '.pfb')
@@ -215,9 +237,7 @@ class Parser(object):
                             if len(svg_info) == 7:
                                 svg_data = svg_data.replace(svg_find, svg_replace)
 
-                            import xml.dom.minidom
                             svg = xml.dom.minidom.parseString(svg_data).documentElement
-                            from svglib.svglib import SvgRenderer
 
                             svgRenderer = SvgRenderer()
                             svgRenderer.render(svg)
@@ -456,28 +476,6 @@ class Parser(object):
                 style = self.styles[name]
                 self.style_stack.append(style)
 
-
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        # Python 2.5
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        try:
-            # Python 2.5
-            import xml.etree.ElementTree as etree
-        except ImportError:
-            try:
-                # normal cElementTree install
-                import cElementTree as etree
-            except ImportError:
-                try:
-                    # normal ElementTree install
-                    import elementtree.ElementTree as etree
-                except ImportError:
-                    print("Failed to import ElementTree from any known place")
 
 def inner_xml(e):
     return etree.tostring(e)[len(e.tag)+2:-len(e.tag)-3]
@@ -738,9 +736,7 @@ class XmlParser(object):
         if search is not None:
             data = data.replace(search, replace)
 
-        import xml.dom.minidom
         svg = xml.dom.minidom.parseString(data).documentElement
-        from svglib.svglib import SvgRenderer
 
         svgRenderer = SvgRenderer()
         svgRenderer.render(svg)
@@ -783,10 +779,6 @@ class XmlParser(object):
         yield barcode_obj
 
     def import_pdf_font(self, base_name, face_name):
-        import os
-        import reportlab
-        from reportlab.pdfbase import pdfmetrics
-
         if self.fonts.get(face_name, None) is None:
             afm = find(base_name + '.afm')
             pfb = find(base_name + '.pfb')
