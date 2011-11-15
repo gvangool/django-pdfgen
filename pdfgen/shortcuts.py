@@ -1,4 +1,4 @@
-from pdfgen.parser import Parser, XmlParser
+from pdfgen.parser import Parser, XmlParser, find
 from django.template.context import Context
 from django.template.loader import render_to_string
 from django.http import HttpResponse
@@ -7,12 +7,15 @@ from django.utils import translation
 from django.conf import settings
 
 def get_parser(template_name):
+    """
+    Get the correct parser based on the file extension
+    """
     import os
 
     if template_name[-4:] == '.xml':
         parser = XmlParser()
-        parser.media_root = settings.MEDIA_ROOT
-        parser.barcode_library = os.path.join(settings.MEDIA_ROOT, 'common', 'pdf_img', 'barcode.ps')
+        # set the barcode file
+        parser.barcode_library = find('common/pdf_img/barcode.ps')
         return parser
     else:
         return Parser()
@@ -20,6 +23,9 @@ def get_parser(template_name):
 
 
 def render_to_pdf_data(template_name, context, context_instance=None):
+    """
+    Parse the template into binary PDF data
+    """
     context_instance = context_instance or Context()
 
     input = render_to_string(template_name, context, context_instance)
@@ -28,6 +34,9 @@ def render_to_pdf_data(template_name, context, context_instance=None):
     return parser.parse(input)
 
 def render_to_pdf_download(template_name, context, context_instance=None, filename=None):
+    """
+    Parse the template into a download
+    """
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')
@@ -43,6 +52,9 @@ def render_to_pdf_download(template_name, context, context_instance=None, filena
     return response
 
 def multiple_templates_to_pdf_download(template_names, context, context_instance=None, filename=None):
+    """
+    Render multiple templates with the same context into a single download
+    """
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')
@@ -64,6 +76,9 @@ def multiple_templates_to_pdf_download(template_names, context, context_instance
     return response
 
 def multiple_contexts_to_pdf_data(template_name, contexts, context_instance):
+    """
+    Render multiple templates with the same context into a single data bundle
+    """
     all_parts = []
     parser = get_parser(template_name)
 
@@ -84,6 +99,9 @@ def multiple_contexts_to_pdf_data(template_name, contexts, context_instance):
     return output
 
 def multiple_contexts_to_pdf_download(template_name, contexts, context_instance=None, filename=None):
+    """
+    Render a single template with multiple contexts into a single download
+    """
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')
@@ -96,6 +114,9 @@ def multiple_contexts_to_pdf_download(template_name, contexts, context_instance=
     return response
 
 def multiple_contexts_and_templates_to_pdf_download(contexts_templates, context_instance=None, filename=None):
+    """
+    Render multiple templates with multiple contexts into a single download
+    """
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')

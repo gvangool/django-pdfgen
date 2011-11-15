@@ -1,5 +1,3 @@
-from django.conf import settings
-
 from cStringIO import StringIO
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus.doctemplate import SimpleDocTemplate
@@ -17,6 +15,13 @@ from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus.frames import Frame
 from reportlab.platypus.figures import DrawingFigure
 from reportlab.platypus.flowables import Flowable, XBox
+
+from django.conf import settings
+try:
+    from django.contrib.staticfiles.finders import find
+except ImportError:
+    def find(path):
+        return os.path.join(settings.MEDIA_ROOT, path)
 
 from pdfgen.barcode import Barcode
 
@@ -98,8 +103,8 @@ class Parser(object):
         from reportlab.pdfbase import pdfmetrics
 
         if self.fonts.get(face_name, None) is None:
-            afm = os.path.join(settings.MEDIA_ROOT, base_name + '.afm')
-            pfb = os.path.join(settings.MEDIA_ROOT, base_name + '.pfb')
+            afm = find(base_name + '.afm')
+            pfb = find(base_name + '.pfb')
 
             try:
                 face = pdfmetrics.EmbeddedType1Face(afm, pfb)
@@ -196,7 +201,7 @@ class Parser(object):
                                 svg_name, svg_scale, svg_w, svg_h, svg_path = svg_info
 
 
-                            svg_file = open(settings.MEDIA_ROOT + svg_path, 'rb')
+                            svg_file = open(find(svg_path), 'rb')
                             svg_data = svg_file.read()
                             svg_file.close()
 
@@ -223,7 +228,7 @@ class Parser(object):
                             obj = self.img_dict[img_info[0]]
                         else:
                             img_name, img_w, img_h, img_path = img_info
-                            img_obj = Image(settings.MEDIA_ROOT + img_path, width=self.unit*float(img_w), height=self.unit*float(img_h))
+                            img_obj = Image(find(img_path), width=self.unit*float(img_w), height=self.unit*float(img_h))
                             align = line[endpos+1:endpos+2]
                             if align == '<': img_obj.hAlign = 'LEFT'
                             elif align == '>': img_obj.hAlign = 'RIGHT'
@@ -236,7 +241,7 @@ class Parser(object):
                             obj = self.img_dict[barcode_info[0]]
                         else:
                             barcode_name, barcode_type, barcode_scale, barcode_w, barcode_h, barcode_data = barcode_info
-                            barcode_obj = Barcode(library=os.path.join(settings.MEDIA_ROOT, 'common', 'pdf_img', 'barcode.ps'),
+                            barcode_obj = Barcode(library=find('common/pdf_img/barcode.ps'),
                                                   width=self.unit * float(barcode_w),
                                                   height=self.unit * float(barcode_h),
                                                   data=barcode_data,
@@ -468,18 +473,39 @@ def inner_xml(e):
     return etree.tostring(e)[len(e.tag)+2:-len(e.tag)-3]
 
 class XmlParser(object):
+    """
+    Management command to create a pdf
+    """
+
     document = None
     styles = None
     out_buffer = None
     style_stack = None
-    media_root = ''
     barcode_library = ''
     fonts = {}
+    #: the Django MEDIA_URL
+    media_url = ''
+    #: the Django STATIC_URL
+    static_url = ''
 
     def __init__(self):
         self.styles = getSampleStyleSheet()
         self.out_buffer = StringIO()
         self.style_stack = []
+        self.media_url = getattr(settings, 'MEDIA_URL', '')
+        self.static_url = getattr(settings, 'STATIC_URL', '')
+
+    def get_from_url(self, url):
+        '''
+        For a given URL, return the matching path to the directory.
+
+        Support MEDIA_URL and STATIC_URL
+        '''
+        if self.static_url and url.startswith(self.static_url) and find:
+            return find(url.replace(self.static_url, '', 1))
+        elif self.media_url and url.startswith(self.media_url):
+            return os.path.join(settings.MEDIA_ROOT, url.replace(self.media_url, '', 1))
+        return url
 
     def merge_parts(self, parts):
         if self.document is not None:
@@ -693,7 +719,7 @@ class XmlParser(object):
         search = e.get('search', None)
         replace = e.get('replace', None)
 
-        fh = open(self.media_root + path, 'rb')
+        fh = open(self.get_from_url(path), 'rb')
         data = fh.read()
         fh.close()
 
@@ -719,7 +745,7 @@ class XmlParser(object):
         path = e.get('src')
         align = e.get('align', 'left').upper()
 
-        img_obj = Image(self.media_root + path, width=width, height=height)
+        img_obj = Image(self.get_from_url(path), width=width, height=height)
         img_obj.hAlign = align
 
         yield img_obj
@@ -750,8 +776,8 @@ class XmlParser(object):
         from reportlab.pdfbase import pdfmetrics
 
         if self.fonts.get(face_name, None) is None:
-            afm = os.path.join(settings.MEDIA_ROOT, base_name + '.afm')
-            pfb = os.path.join(settings.MEDIA_ROOT, base_name + '.pfb')
+            afm = find(base_name + '.afm')
+            pfb = find(base_name + '.pfb')
 
             try:
                 face = pdfmetrics.EmbeddedType1Face(afm, pfb)
