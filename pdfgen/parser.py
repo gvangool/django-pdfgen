@@ -1,20 +1,24 @@
+import codecs
+import logging
+import os
 from cStringIO import StringIO
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.platypus.doctemplate import SimpleDocTemplate
-from reportlab.platypus import Paragraph, Table, Spacer, Image, PageBreak
+import reportlab
+from reportlab.lib import pagesizes, colors
 from reportlab.lib.units import cm, inch, mm, toLength
 from reportlab.lib.pagesizes import A4
-from reportlab.lib import pagesizes
-from reportlab.lib import colors
 from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
-from reportlab.lib.styles import ParagraphStyle
-from svglib.svglib import svg2rlg
-import codecs
-import os
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.platypus import Paragraph, Table, Spacer, Image, PageBreak
+from reportlab.platypus.doctemplate import SimpleDocTemplate
 from reportlab.platypus.frames import Frame
 from reportlab.platypus.figures import DrawingFigure
 from reportlab.platypus.flowables import Flowable, XBox
+from svglib.svglib import svg2rlg
+from svglib.svglib import SvgRenderer
+
+import xml.dom.minidom
 
 from django.conf import settings
 try:
@@ -23,7 +27,33 @@ except ImportError:
     def find(path):
         return os.path.join(settings.MEDIA_ROOT, path)
 
+# find an etree implementation
+try:
+    from lxml import etree
+except ImportError:
+    try:
+        # Python 2.5
+        import xml.etree.cElementTree as etree
+    except ImportError:
+        try:
+            # Python 2.5
+            import xml.etree.ElementTree as etree
+        except ImportError:
+            try:
+                # normal cElementTree install
+                import cElementTree as etree
+            except ImportError:
+                try:
+                    # normal ElementTree install
+                    import elementtree.ElementTree as etree
+                except ImportError:
+                    print("Failed to import ElementTree from any known place")
+
 from pdfgen.barcode import Barcode
+
+
+logger = logging.getLogger(__name__)
+
 
 CSS_DICT = {
     'padding-left': 'LEFTPADDING',
@@ -43,19 +73,22 @@ CSS_DICT = {
     'center': TA_CENTER,
 }
 
+
 def _new_draw(self):
     self.canv.setLineWidth(0.2*mm)
     self.drawPara(self.debug)
+
 
 def patch_reportlab():
     setattr(Paragraph, 'draw', _new_draw)
 
 patch_reportlab()
 
+
 def debug_print(text):
-    pass
-#    if settings.DEBUG:
-#        print(text)
+    if settings.DEBUG:
+        logger.debug(text)
+
 
 def split_ignore(haystack, needle, ignore_start=None, ignore_end=None):
     parts = []
@@ -98,10 +131,6 @@ class Parser(object):
     img_dict = {}
 
     def import_pdf_font(self, base_name, face_name):
-        import os
-        import reportlab
-        from reportlab.pdfbase import pdfmetrics
-
         if self.fonts.get(face_name, None) is None:
             afm = find(base_name + '.afm')
             pfb = find(base_name + '.pfb')
@@ -117,14 +146,12 @@ class Parser(object):
         else:
             self.fonts[face_name] = True
 
-
     def reset_table(self):
         self.table_data = []
         self.table_row = []
         self.table_cols = []
         self.table_styles = []
         self.table_align = 'CENTER'
-
 
     def append_to_parts(self, item):
         if self.parts_buffer is not None:
@@ -145,7 +172,8 @@ class Parser(object):
         # prepare for parsing
         i = 0
         buffer_len = len(buffer)
-        mode = 0 # 0 = normal, 1 = table row, 2 = insert object
+        # Possible modes: 0 = normal, 1 = table row, 2 = insert object
+        mode = 0
         new_line = True
         new_para = True
         cue = 0
@@ -164,11 +192,11 @@ class Parser(object):
             for line in lines:
                 c = line[:1]
                 if c == '#':
-                    debug_print( '[comment]')
+                    debug_print('[comment]')
                 elif c == '$':
                     self.parse_paragraph_style(line[1:])
                 elif c == '~':
-                    debug_print( '[document element %s]' % line[1])
+                    debug_print('[document element %s]' % line[1])
                     elem = line[1]
                     endpos = line.find(']', 2)
                     if elem == 'D':
@@ -182,8 +210,10 @@ class Parser(object):
                         else:
                             self.table_cols = list(float(n) * self.unit for n in line[3:endpos].split('|'))
                             align = line[endpos+1:endpos+2]
-                            if align == '<': self.table_align = 'LEFT'
-                            elif align == '>': self.table_align = 'RIGHT'
+                            if align == '<':
+                                self.table_align = 'LEFT'
+                            elif align == '>':
+                                self.table_align = 'RIGHT'
                     elif elem == 'B':
                         self.append_to_parts(PageBreak())
                     elif elem == 'S':
@@ -200,7 +230,6 @@ class Parser(object):
                             else:
                                 svg_name, svg_scale, svg_w, svg_h, svg_path = svg_info
 
-
                             svg_file = open(find(svg_path), 'rb')
                             svg_data = svg_file.read()
                             svg_file.close()
@@ -208,9 +237,7 @@ class Parser(object):
                             if len(svg_info) == 7:
                                 svg_data = svg_data.replace(svg_find, svg_replace)
 
-                            import xml.dom.minidom
                             svg = xml.dom.minidom.parseString(svg_data).documentElement
-                            from svglib.svglib import SvgRenderer
 
                             svgRenderer = SvgRenderer()
                             svgRenderer.render(svg)
@@ -230,8 +257,10 @@ class Parser(object):
                             img_name, img_w, img_h, img_path = img_info
                             img_obj = Image(find(img_path), width=self.unit*float(img_w), height=self.unit*float(img_h))
                             align = line[endpos+1:endpos+2]
-                            if align == '<': img_obj.hAlign = 'LEFT'
-                            elif align == '>': img_obj.hAlign = 'RIGHT'
+                            if align == '<':
+                                img_obj.hAlign = 'LEFT'
+                            elif align == '>':
+                                img_obj.hAlign = 'RIGHT'
                             self.img_dict[img_name] = img_obj
                     elif elem == 'C':
                         barcode_info_raw = line[3:endpos]
@@ -248,8 +277,10 @@ class Parser(object):
                                                   scale=float(barcode_scale),
                                                   type=barcode_type)
                             align = line[endpos+1:endpos+2]
-                            if align == '<': barcode_obj.hAlign = 'LEFT'
-                            elif align == '>': barcode_obj.hAlign = 'RIGHT'
+                            if align == '<':
+                                barcode_obj.hAlign = 'LEFT'
+                            elif align == '>':
+                                barcode_obj.hAlign = 'RIGHT'
                             self.img_dict[barcode_name] = barcode_obj
                     elif elem == 'F':
                         font_info_raw = line[3:endpos]
@@ -285,7 +316,7 @@ class Parser(object):
                     c = td[i]
                     c_1 = td[i-1:i]
                     if c == '[' and c_1 != '\\':
-                        cue = i+1
+                        cue = i + 1
                     if (c == '|' or c == ']') and c_1 != '\\':
                         cell_content = td[cue:i]
                         pop_after_cell = False
@@ -314,7 +345,7 @@ class Parser(object):
                         if pop_after_cell:
                             self.parse_paragraph_style('')
 
-                        cue = i+1
+                        cue = i + 1
                         if c == ']':
                             self.table_data.append(self.table_row)
                             self.table_row = []
@@ -332,8 +363,6 @@ class Parser(object):
 
             mode = 0
 
-
-
         return self.parts
 
     def merge_parts(self, parts):
@@ -350,7 +379,6 @@ class Parser(object):
     def parse(self, buffer):
         parts = self.parse_parts(buffer)
         return self.merge_parts(parts)
-
 
     def handle_document_properties(self, raw_properties, title):
         format, raw_unit, raw_margins = raw_properties.split(';')
@@ -391,7 +419,7 @@ class Parser(object):
             param = params[i]
             if param[0] == '#':
                 params[i] = colors.HexColor(eval('0x' + param[1:]))
-            elif param[-1] == 'u' :
+            elif param[-1] == 'u':
                 params[i] = float(param[:-1])*self.unit
             else:
                 try:
@@ -419,11 +447,13 @@ class Parser(object):
                 nk = CSS_DICT.get(k, k)
                 # translate v
                 v = CSS_DICT.get(v, v)
-                if nk == 'fontSize' or nk == 'leading': v = toLength(v)
-                elif nk == 'color': v = colors.HexColor(eval('0x' + v[1:]))
+                if nk == 'fontSize' or nk == 'leading':
+                    v = toLength(v)
+                elif nk == 'color':
+                    v = colors.HexColor(eval('0x' + v[1:]))
                 new_dict[nk] = v
 
-            if not new_dict.has_key('leading') and new_dict.has_key('fontSize'):
+            if not 'leading' in new_dict and 'fontSize' in new_dict:
                 new_dict['leading'] = new_dict['fontSize'] + 2.0
 
             if source_name is not None:
@@ -433,7 +463,7 @@ class Parser(object):
 
             new_dict.update({'name': name})
 
-            if self.styles.has_key(name):
+            if name in self.styles:
                 self.styles[name].__dict__.update(new_dict)
             else:
                 self.styles.add(ParagraphStyle(**new_dict))
@@ -442,35 +472,14 @@ class Parser(object):
             name = raw_style.strip()
             if name == 'end' or name == '':
                 self.style_stack.pop()
-            elif self.styles.has_key(name):
+            elif name in self.styles:
                 style = self.styles[name]
                 self.style_stack.append(style)
 
 
-
-try:
-    from lxml import etree
-except ImportError:
-    try:
-        # Python 2.5
-        import xml.etree.cElementTree as etree
-    except ImportError:
-        try:
-            # Python 2.5
-            import xml.etree.ElementTree as etree
-        except ImportError:
-            try:
-                # normal cElementTree install
-                import cElementTree as etree
-            except ImportError:
-                try:
-                    # normal ElementTree install
-                    import elementtree.ElementTree as etree
-                except ImportError:
-                    print("Failed to import ElementTree from any known place")
-
 def inner_xml(e):
     return etree.tostring(e)[len(e.tag)+2:-len(e.tag)-3]
+
 
 class XmlParser(object):
     """
@@ -581,11 +590,13 @@ class XmlParser(object):
             nk = CSS_DICT.get(k, k)
             # translate v
             v = CSS_DICT.get(v, v)
-            if nk == 'fontSize' or nk == 'leading': v = toLength(v)
-            elif nk == 'color': v = colors.HexColor(eval('0x' + v[1:]))
+            if nk == 'fontSize' or nk == 'leading':
+                v = toLength(v)
+            elif nk == 'color':
+                v = colors.HexColor(eval('0x' + v[1:]))
             new_dict[nk] = v
 
-        if not new_dict.has_key('leading') and new_dict.has_key('fontSize'):
+        if not 'leading' in new_dict and 'fontSize' in new_dict:
             new_dict['leading'] = new_dict['fontSize'] + 2.0
 
         if source_name is not None:
@@ -595,7 +606,7 @@ class XmlParser(object):
 
         new_dict.update({'name': name})
 
-        if self.styles.has_key(name):
+        if name in self.styles:
             self.styles[name].__dict__.update(new_dict)
         else:
             self.styles.add(ParagraphStyle(**new_dict))
@@ -645,7 +656,7 @@ class XmlParser(object):
         if 'area' in tstyle_dict:
             del tstyle_dict['area']
 
-        if tstyle_dict.has_key('border'):
+        if 'border' in tstyle_dict:
             border = tstyle_dict['border']
             tstyle_dict.update({'border-left': border,
                                 'border-right': border,
@@ -654,7 +665,7 @@ class XmlParser(object):
                                 })
             del tstyle_dict['border']
 
-        if tstyle_dict.has_key('padding'):
+        if 'padding' in tstyle_dict:
             padding = tstyle_dict['padding']
             tstyle_dict.update({'padding-left': padding,
                                 'padding-right': padding,
@@ -685,7 +696,6 @@ class XmlParser(object):
         for c in e:
             if c.tag == 'td':
                 yield list(self.parse_children(c)) if len(c) else None
-
 
     def table(self, e):
         cols = [toLength(i.strip()) for i in e.get('cols').split(',')]
@@ -726,9 +736,7 @@ class XmlParser(object):
         if search is not None:
             data = data.replace(search, replace)
 
-        import xml.dom.minidom
         svg = xml.dom.minidom.parseString(data).documentElement
-        from svglib.svglib import SvgRenderer
 
         svgRenderer = SvgRenderer()
         svgRenderer.render(svg)
@@ -771,10 +779,6 @@ class XmlParser(object):
         yield barcode_obj
 
     def import_pdf_font(self, base_name, face_name):
-        import os
-        import reportlab
-        from reportlab.pdfbase import pdfmetrics
-
         if self.fonts.get(face_name, None) is None:
             afm = find(base_name + '.afm')
             pfb = find(base_name + '.pfb')

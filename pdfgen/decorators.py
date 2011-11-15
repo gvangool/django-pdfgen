@@ -9,6 +9,7 @@ from functools import wraps
 from pdfgen.parser import Parser
 from pdfgen.shortcuts import render_to_pdf_download, multiple_templates_to_pdf_download
 
+
 def pdf_download(default_template_name, default_file_name=None, default_context=None):
     """
     Based on templatable_view from Jonathan Slenders
@@ -48,7 +49,7 @@ def pdf_download(default_template_name, default_file_name=None, default_context=
             file_name = default_file_name or 'output.pdf'
 
             # Pop decorator parameters
-            context.update(kwargs.pop('context', { }))
+            context.update(kwargs.pop('context', {}))
             template_name = kwargs.pop('template_name', default_template_name)
 
             # Call original view function
@@ -59,7 +60,7 @@ def pdf_download(default_template_name, default_file_name=None, default_context=
 
                 # Make sure templates are rendered in strict mode.
                 # see: cl_utils/django_patches/patch_resolve_to_not_fail_silently.py
-                context.update({'strict': True })
+                context.update({'strict': True})
             elif isinstance(view_result, tuple):
                 template_name, view_result_file_name, view_result_context = view_result
                 context.update(view_result_context)

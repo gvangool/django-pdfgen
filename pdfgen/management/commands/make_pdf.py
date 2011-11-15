@@ -1,13 +1,22 @@
+import codecs
+from optparse import make_option
+
 from django.conf import settings
 from django.core.management.base import NoArgsCommand
 
-from optparse import make_option
-import codecs
+from pdfgen.parser import Parser
+
 
 class Command(NoArgsCommand):
+    """
+    Management command to create a pdf
+    """
+
     help = u'Generate pdf'
     option_list = NoArgsCommand.option_list + (
-        make_option('--source', dest='source', action='store', default=None, help='The source file in the City Live Template for ReportLab (CLTR) language.'),
+        make_option('--source', dest='source', action='store', default=None,
+                    help='The source file in the City Live Template for '
+                         'ReportLab (CLTR) language.'),
     )
 
     def handle_noargs(self, **options):
@@ -19,7 +28,6 @@ class Command(NoArgsCommand):
         buffer = fh.read()
         fh.close()
 
-        from pdfgen.parser import Parser
         p = Parser()
         output = p.parse(buffer)
 

@@ -1,10 +1,13 @@
-from pdfgen.parser import Parser, XmlParser, find
+from reportlab.platypus.flowables import PageBreak
+
+from django.conf import settings
+from django.http import HttpResponse
 from django.template.context import Context
 from django.template.loader import render_to_string
-from django.http import HttpResponse
-from reportlab.platypus.flowables import PageBreak
 from django.utils import translation
-from django.conf import settings
+
+from pdfgen.parser import Parser, XmlParser, find
+
 
 def get_parser(template_name):
     """
@@ -21,7 +24,6 @@ def get_parser(template_name):
         return Parser()
 
 
-
 def render_to_pdf_data(template_name, context, context_instance=None):
     """
     Parse the template into binary PDF data
@@ -32,6 +34,7 @@ def render_to_pdf_data(template_name, context, context_instance=None):
     parser = get_parser(template_name)
 
     return parser.parse(input)
+
 
 def render_to_pdf_download(template_name, context, context_instance=None, filename=None):
     """
@@ -50,6 +53,7 @@ def render_to_pdf_download(template_name, context, context_instance=None, filena
     response.write(output)
 
     return response
+
 
 def multiple_templates_to_pdf_download(template_names, context, context_instance=None, filename=None):
     """
@@ -75,6 +79,7 @@ def multiple_templates_to_pdf_download(template_names, context, context_instance
 
     return response
 
+
 def multiple_contexts_to_pdf_data(template_name, contexts, context_instance):
     """
     Render multiple templates with the same context into a single data bundle
@@ -98,6 +103,7 @@ def multiple_contexts_to_pdf_data(template_name, contexts, context_instance):
 
     return output
 
+
 def multiple_contexts_to_pdf_download(template_name, contexts, context_instance=None, filename=None):
     """
     Render a single template with multiple contexts into a single download
@@ -112,6 +118,7 @@ def multiple_contexts_to_pdf_download(template_name, contexts, context_instance=
     response.write(output)
 
     return response
+
 
 def multiple_contexts_and_templates_to_pdf_download(contexts_templates, context_instance=None, filename=None):
     """
