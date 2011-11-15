@@ -9,10 +9,11 @@ from functools import wraps
 from pdfgen.parser import Parser
 from pdfgen.shortcuts import render_to_pdf_download, multiple_templates_to_pdf_download
 
+
 def pdf_download(default_template_name, default_file_name=None, default_context=None):
     """
     Based on templatable_view from Jonathan Slenders
-    
+
     Creates a decorator which
     - Extracts the `context` and `template_name` params from the view.
     - Call the view without those parameters
@@ -48,7 +49,7 @@ def pdf_download(default_template_name, default_file_name=None, default_context=
             file_name = default_file_name or 'output.pdf'
 
             # Pop decorator parameters
-            context.update(kwargs.pop('context', { }))
+            context.update(kwargs.pop('context', {}))
             template_name = kwargs.pop('template_name', default_template_name)
 
             # Call original view function
@@ -59,7 +60,7 @@ def pdf_download(default_template_name, default_file_name=None, default_context=
 
                 # Make sure templates are rendered in strict mode.
                 # see: cl_utils/django_patches/patch_resolve_to_not_fail_silently.py
-                context.update({'strict': True })
+                context.update({'strict': True})
             elif isinstance(view_result, tuple):
                 template_name, view_result_file_name, view_result_context = view_result
                 context.update(view_result_context)
@@ -67,13 +68,13 @@ def pdf_download(default_template_name, default_file_name=None, default_context=
             else:
                 # otherwise, just return the HttpResponseRedirect or whatever the view returned
                 return view_result
-            
+
             if isinstance(template_name, list):
                 response = multiple_templates_to_pdf_download(template_name, context, context_instance=RequestContext(request), filename=file_name)
             else:
                 response = render_to_pdf_download(template_name, context, context_instance=RequestContext(request), filename=file_name)
-            
+
             return response
-            
+
         return decorate
     return decorator
