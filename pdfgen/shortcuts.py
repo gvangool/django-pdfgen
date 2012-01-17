@@ -43,7 +43,7 @@ def render_to_pdf_download(template_name, context, context_instance=None, filena
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')
-    response['Content-Disposition'] = u'attachment; filename=%s' % (filename or u'document.pdf')
+    response['Content-Disposition'] = u'attachment; filename="%s"' % (filename or u'document.pdf')
 
     input = render_to_string(template_name, context, context_instance)
 
@@ -62,7 +62,7 @@ def multiple_templates_to_pdf_download(template_names, context, context_instance
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')
-    response['Content-Disposition'] = u'attachment; filename=%s' % (filename or u'document.pdf')
+    response['Content-Disposition'] = u'attachment; filename="%s"' % (filename or u'document.pdf')
 
     all_parts = []
 
@@ -111,7 +111,7 @@ def multiple_contexts_to_pdf_download(template_name, contexts, context_instance=
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')
-    response['Content-Disposition'] = u'attachment; filename=%s' % (filename or u'document.pdf')
+    response['Content-Disposition'] = u'attachment; filename="%s"' % (filename or u'document.pdf')
 
     output = multiple_contexts_to_pdf_data(template_name, contexts, context_instance)
 
@@ -127,7 +127,7 @@ def multiple_contexts_and_templates_to_pdf_download(contexts_templates, context_
     context_instance = context_instance or Context()
 
     response = HttpResponse(mimetype='application/pdf')
-    response['Content-Disposition'] = u'attachment; filename=%s' % (filename or u'document.pdf')
+    response['Content-Disposition'] = u'attachment; filename="%s"' % (filename or u'document.pdf')
 
     all_parts = []
 
